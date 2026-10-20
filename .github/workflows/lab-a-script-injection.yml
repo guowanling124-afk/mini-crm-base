@@ -1,0 +1,38 @@
+# =============================================================================
+# lab-a-script-injection.yml  —  ⚠️ INTENTIONALLY VULNERABLE TEST FIXTURE ⚠️
+# -----------------------------------------------------------------------------
+# TASK A — script injection.
+#
+# WHAT THIS DEMONSTRATES
+#   Untrusted input (the issue title) is interpolated DIRECTLY into a `run:`
+#   shell step. GitHub expands ${{ ... }} before the shell runs, so an issue
+#   titled  $(echo injected > proof.txt)  executes that command on the runner.
+#
+# IMPORTANT FRAMING FOR THE REPORT
+#   This is a MISCONFIGURATION on our side, not a platform defect. GitHub's docs
+#   explicitly warn against this pattern. In your write-up classify any finding
+#   here as "Not Applicable (our config error)" and use it to DEFINE the
+#   boundary between "we configured it wrong" and "the platform failed". The
+#   safe version is bot.yml (passes the value via env and references "$VAR").
+#
+# HOW TO TRIGGER (on your own test repo only)
+#   Open an issue whose TITLE is:  $(echo injected > proof.txt)
+#   Then check the run log for the step below.
+# =============================================================================
+name: "LAB-A ⚠️ script-injection (vulnerable fixture)"
+
+on:
+    issues:
+        types: [opened]
+
+permissions:
+    contents: read
+
+jobs:
+    vulnerable-echo:
+        runs-on: ubuntu-latest
+        steps:
+            - name: ⚠️ Unsafe interpolation of issue title
+              # VULNERABLE: the title is pasted straight into the script.
+              run: |
+                  echo "Processing issue: ${{ github.event.issue.title }}"

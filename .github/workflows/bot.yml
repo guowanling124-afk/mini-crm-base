@@ -1,0 +1,49 @@
+# =============================================================================
+# bot.yml  —  SAFE BASELINE  (reference for Task B: pwn request)
+# -----------------------------------------------------------------------------
+# A comment-triggered automation bot, modelled on how real projects wire one up.
+# It is the SAFE side of your Task B comparison:
+#   * It reacts to `issue_comment` / `issues`, which ANY user (including a fork
+#     author) can trigger by commenting "@bot" — so the trigger itself is
+#     attacker-reachable. That is expected; the safety comes from the next two
+#     points.
+#   * `permissions:` is narrowed to read-only (+ the one id-token it needs).
+#   * checkout uses `fetch-depth: 1` and does NOT check out a fork PR's head,
+#     so untrusted code is never executed with the repo's token/secrets.
+# The vulnerable counterpart (pull_request_target that checks out & runs PR
+# code) is in lab-b-pwn-request.yml.
+# =============================================================================
+name: 🤖 Bot
+
+on:
+    issue_comment:
+        types: [created]
+    issues:
+        types: [opened]
+
+jobs:
+    respond:
+        if: |
+            (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@bot')) ||
+            (github.event_name == 'issues' && contains(github.event.issue.body, '@bot'))
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            issues: read
+            id-token: write
+        steps:
+            - name: 📥 Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            # SAFE: the untrusted text is passed through an environment variable
+            # and referenced as "$USER_TEXT", never interpolated into the shell.
+            # Compare with lab-a-script-injection.yml, which does the opposite.
+            - name: 🤖 Acknowledge
+              env:
+                  USER_TEXT: ${{ github.event.comment.body || github.event.issue.body }}
+              run: |
+                  echo "Bot received a request."
+                  # length only — we never echo the raw text into a command
+                  printf 'request length: %s\n' "${#USER_TEXT}"

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Mini CRM</title>
+    <style>
+        :root { font-family: system-ui, sans-serif; }
+        body { max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+        h1 { font-size: 1.4rem; }
+        form { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+        input { padding: .4rem .6rem; border: 1px solid #ccc; border-radius: 6px; }
+        button { padding: .4rem .8rem; border: 0; border-radius: 6px; background: #2d6cdf; color: #fff; cursor: pointer; }
+        button.del { background: #d9534f; padding: .2rem .5rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid #eee; font-size: .9rem; }
+        .muted { color: #888; font-size: .8rem; }
+    </style>
+</head>
+<body>
+    <h1>Mini CRM</h1>
+    <p class="muted">A controlled stage for GitHub Actions security testing. The app is deliberately tiny.</p>
+
+    <form id="add-form">
+        <input id="name" placeholder="Name" required/>
+        <input id="email" placeholder="Email" type="email"/>
+        <input id="company" placeholder="Company"/>
+        <button type="submit">Add contact</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Name</th><th>Email</th><th>Company</th><th></th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+    </table>
+
+    <script>
+        const api = '/api/contacts';
+
+        async function load() {
+            const res = await fetch(api);
+            const contacts = await res.json();
+            const rows = document.getElementById('rows');
+            rows.innerHTML = '';
+            for (const c of contacts) {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + c.id + '</td>' +
+                    '<td></td><td></td><td></td>' +
+                    '<td><button class="del" data-id="' + c.id + '">x</button></td>';
+                // set text via textContent to avoid any HTML interpretation
+                tr.children[1].textContent = c.name ?? '';
+                tr.children[2].textContent = c.email ?? '';
+                tr.children[3].textContent = c.company ?? '';
+                rows.appendChild(tr);
+            }
+        }
+
+        document.getElementById('add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                company: document.getElementById('company').value,
+            };
+            await fetch(api, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            e.target.reset();
+            load();
+        });
+
+        document.getElementById('rows').addEventListener('click', async (e) => {
+            if (e.target.matches('button.del')) {
+                await fetch(api + '/' + e.target.dataset.id, { method: 'DELETE' });
+                load();
+            }
+        });
+
+        load();
+    </script>
+</body>
+</html>

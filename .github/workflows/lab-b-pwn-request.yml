@@ -1,0 +1,56 @@
+# =============================================================================
+# lab-b-pwn-request.yml  —  ⚠️ INTENTIONALLY VULNERABLE TEST FIXTURE ⚠️
+# -----------------------------------------------------------------------------
+# TASK B — pwn request (pull_request_target privilege escalation).
+#
+# WHAT THIS DEMONSTRATES
+#   `pull_request_target` runs in the BASE repo's context: it has the base
+#   repo's GITHUB_TOKEN and secrets. This fixture then checks out the FORK PR's
+#   head and runs code from it (via `mvn test`, which executes test code the
+#   fork author controls). A fork author can therefore read FAKE_SECRET / the
+#   token. This is the core "pwn request".
+#
+# FRAMING
+#   The question for your report: does the PLATFORM hand secrets to a workflow
+#   that it then lets run untrusted code? Document exactly which checkout config
+#   you used. Then test the FIXED version (lab-b-pwn-request-fixed.yml) and
+#   whether actions/checkout's fork-PR mitigations change the outcome — that is
+#   your "effective fix vs residual risk" material.
+#
+# HOW TO TRIGGER (your own base repo + a second account's fork PR only)
+#   Put a canary secret FAKE_SECRET=canary123 in the base repo settings.
+#   From the fork, open a PR that adds a test which echoes $FAKE_SECRET.
+# =============================================================================
+name: "LAB-B ⚠️ pwn-request (vulnerable fixture)"
+
+on:
+    pull_request_target:
+        types: [opened, synchronize, reopened]
+
+permissions:
+    contents: read
+
+jobs:
+    vulnerable-build:
+        runs-on: ubuntu-latest
+        env:
+            FAKE_SECRET: ${{ secrets.FAKE_SECRET }}   # canary123 in your testbed
+        steps:
+            # VULNERABLE: checks out the UNTRUSTED fork PR head while holding the
+            # base repo's secrets.
+            - name: 📥 Checkout PR head (untrusted)
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.pull_request.head.sha }}
+
+            - name: ⚙️ Set up JDK 21
+              uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '21'
+                  cache: maven
+
+            # VULNERABLE: runs code the fork author controls, with FAKE_SECRET in
+            # the environment. A malicious test can exfiltrate it.
+            - name: ⚠️ Build & test untrusted code
+              run: mvn -B test

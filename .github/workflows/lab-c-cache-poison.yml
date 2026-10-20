@@ -1,0 +1,55 @@
+# =============================================================================
+# lab-c-cache-poison.yml  —  ⚠️ INTENTIONALLY VULNERABLE TEST FIXTURE ⚠️
+# -----------------------------------------------------------------------------
+# TASK C — cross-repository cache poisoning across the fork<->base boundary.
+#
+# WHAT THIS DEMONSTRATES
+#   `pull_request_target` runs in the BASE repo's cache scope. The cache
+#   service uses its OWN credentials (ACTIONS_CACHE_URL / ACTIONS_RUNTIME_TOKEN),
+#   so even a job declared read-only can WRITE the base repo's shared cache
+#   through actions/cache's post-run save step. A fork PR can therefore plant a
+#   poisoned entry under a key a later trusted (base) workflow will restore.
+#
+# FRAMING
+#   This is the mechanism behind real incidents (TanStack, Trivy). The platform
+#   question for your report: is a fork's cache write really isolated from the
+#   base's cache scope? Record which trigger you used and which cache key the
+#   base workflow later restores. Note the detection gap: cache save/restore do
+#   NOT appear in the GitHub audit log.
+#
+# HOW TO TRIGGER (your own base repo + a second account's fork PR only)
+#   From a fork PR, let this run and write the marker file into the cache under
+#   a shared key; then run ci.yml on the base and see if it restores the marker.
+# =============================================================================
+name: "LAB-C ⚠️ cache-poison (vulnerable fixture)"
+
+on:
+    pull_request_target:
+        types: [opened, synchronize, reopened]
+
+permissions:
+    contents: read      # declared read-only — yet the cache can still be written
+
+jobs:
+    poison-cache:
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📥 Checkout PR head (untrusted)
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.pull_request.head.sha }}
+
+            # A shared cache key that a trusted base workflow would also use.
+            - name: 💾 Restore/define shared cache
+              uses: actions/cache@v4
+              with:
+                  path: ./.poison-cache
+                  key: shared-build-cache-${{ runner.os }}
+
+            # VULNERABLE: fork-controlled content written under the shared key.
+            # actions/cache's post step saves it into the BASE repo's scope.
+            - name: ⚠️ Plant marker in cache
+              run: |
+                  mkdir -p ./.poison-cache
+                  echo "POISONED_BY_FORK=canary123 at $(date -u)" > ./.poison-cache/marker.txt
+                  cat ./.poison-cache/marker.txt

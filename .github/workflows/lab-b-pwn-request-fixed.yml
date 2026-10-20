@@ -1,0 +1,41 @@
+# =============================================================================
+# lab-b-pwn-request-fixed.yml  —  SAFE COUNTERPART to lab-b-pwn-request.yml
+# -----------------------------------------------------------------------------
+# TASK B — the recommended fix, for your "effective fix vs residual risk" step.
+#
+# WHY THIS IS SAFE
+#   * Trigger is `pull_request` (not pull_request_target): fork code runs in the
+#     fork's context WITHOUT the base repo's secrets.
+#   * No secret is placed in the job environment.
+#   * Even though it builds the PR code, there is nothing sensitive to steal.
+#
+# If a job genuinely must use `pull_request_target` (e.g. to label PRs), the
+# safe rule is: do NOT check out or run the PR's code in that job. This file is
+# the clean reference to compare the vulnerable fixture against.
+# =============================================================================
+name: "LAB-B ✅ pwn-request (fixed reference)"
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+permissions:
+    contents: read
+
+jobs:
+    safe-build:
+        runs-on: ubuntu-latest
+        # No secrets in env. Fork code cannot reach anything sensitive.
+        steps:
+            - name: 📥 Checkout PR head
+              uses: actions/checkout@v4
+
+            - name: ⚙️ Set up JDK 21
+              uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '21'
+                  cache: maven
+
+            - name: 🔎 Build & test (no secrets present)
+              run: mvn -B test

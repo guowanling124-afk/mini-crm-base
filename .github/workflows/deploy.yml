@@ -1,0 +1,93 @@
+# =============================================================================
+# deploy.yml  —  SAFE BASELINE, but SECRET-RICH  (reference for Task D & E)
+# -----------------------------------------------------------------------------
+# A realistic deploy pipeline that touches many secrets. It is SAFE because it
+# only runs on `push` to main (fork PRs can't trigger it). Study it for two
+# things:
+#   * Task D (secret masking): notice the many places a secret flows into a
+#     `run:` step or a URL — these are exactly where masking is tested. Replace
+#     the real secrets with FAKE_SECRET=canary123 in your own copy before you
+#     probe masking.
+#   * Task E (remediation): notice the good practice of gating on a derived
+#     BOOLEAN (env.IS_CONFIGURED) instead of referencing the secret directly in
+#     an `if:` expression. Also notice that EVERY third-party action below is
+#     pinned to a MUTABLE TAG (@v4, @v1) rather than a commit SHA — that is the
+#     supply-chain weakness Task E writes up.
+#
+# This file shows the boundary GitHub promises in its bug-bounty scope: "if an
+# attacker can edit the workflow file, they gain access to the repo's secrets."
+# Everything below becomes reachable the moment that boundary breaks.
+# =============================================================================
+name: 🚀 Deploy
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: write
+    packages: write
+
+jobs:
+    deploy:
+        name: 🚀 Deploy
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        env:
+            # Many secrets, as a real deploy job would have. In your testbed copy,
+            # set these to canary values (e.g. canary123) so you can see if any
+            # of them leaks into the logs.
+            DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+            DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+            SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+            # Good practice: gate on a derived boolean, never on the secret itself.
+            IS_CONFIGURED: ${{ secrets.DEPLOY_TOKEN != '' && secrets.DB_PASSWORD != '' }}
+            PRODUCTION_REMOTE: https://git:${{ secrets.DEPLOY_TOKEN }}@github.com/${{ github.repository }}
+
+        steps:
+            - name: 📥 Checkout repo
+              uses: actions/checkout@v4
+
+            - name: ⚙️ Set up JDK 21
+              uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: '21'
+                  cache: maven
+
+            - name: 🔨 Build jar
+              run: mvn -B -DskipTests package
+
+            # NOTE: secret flows into a URL on the command line. In a vulnerable
+            # variant (lab-d) this is where truncation / encoding can defeat
+            # masking. Here it is the realistic pattern you are auditing.
+            - name: ⚙️ Configure git remote
+              if: ${{ env.IS_CONFIGURED == 'true' }}
+              run: |
+                  git remote set-url origin "https://git:${DEPLOY_TOKEN}@github.com/${GITHUB_REPOSITORY}"
+                  git config --global user.email ci@example.com
+                  git config --global user.name mini-crm-bot
+
+            - name: 🐳 Docker login
+              if: ${{ env.DOCKER_USERNAME != '' }}
+              run: echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+
+            - name: 📡 Publish package
+              if: ${{ env.IS_CONFIGURED == 'true' }}
+              run: mvn -B -DskipTests deploy -Dmaven.deploy.skip=false
+              env:
+                  MAVEN_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+                  MAVEN_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: ⚠️ Warn if not configured
+              if: ${{ env.IS_CONFIGURED != 'true' }}
+              run: echo "::warning::Deploy secrets missing — deploy skipped"

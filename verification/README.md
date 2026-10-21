@@ -56,20 +56,18 @@ Two points worth carrying into the write-up:
 becomes shell syntax, so command substitution (and, unquoted, line breaks)
 execute. This is the `run:` step's behaviour, isolated from the platform.
 
-**Does not prove:** that GitHub performs the substitution. That is documented
-platform behaviour ([Security hardening for GitHub Actions — understanding the
-risk of script
+**Did not prove by itself:** that GitHub performs the substitution. That is
+documented platform behaviour ([Security hardening for GitHub Actions —
+understanding the risk of script
 injections](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections)),
-and it is the half of the chain the report still needs from a real run:
+and it was closed out by a real run:
 
-**Still to do for the report:** on your own base repo, open an issue titled
-`$(date -u +%FT%TZ)` and read the `LAB-A` run log. The line should read
-`Processing issue: <timestamp>` — that is the "GitHub returned Z" evidence.
-Use the timestamp, not `proof.txt`, so the evidence is visible in the log
-itself. Keep the repo private and the payload non-destructive; this job has
-`permissions: contents: read` and no secrets, so do not claim credential
-theft — the finding is runner-local code execution, classified **Not
-Applicable (our config error)**.
+**Platform evidence:** see [`platform-evidence-a.md`](platform-evidence-a.md) —
+a real `issues: opened` run whose log line reads
+`Processing issue: 2026-10-21T03:39:45Z`. Keep the payload non-destructive and
+the repo free of real secrets; this job has `permissions: contents: read` and
+no secrets, so do not claim credential theft — the finding is runner-local code
+execution, classified **Not Applicable (our config error)**.
 
 ## Relationship to `bot.yml`
 

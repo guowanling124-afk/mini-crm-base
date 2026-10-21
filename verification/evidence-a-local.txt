@@ -1,0 +1,91 @@
+========================================================================
+Task A -- script injection, local reproduction
+========================================================================
+fixture   : .github/workflows/lab-a-script-injection.yml
+expression: ${{ github.event.issue.title }}
+shell     : bash -e script.sh   (GitHub default: bash -e {0})
+bash      : GNU bash, version 5.3.15(1)-release (aarch64-apple-darwin25.4.0)
+when      : 2026-10-21T14:18:58.542025+11:00
+secrets   : none in env; HOME is a temp dir
+
+--- extracted `run:` block (verbatim from the fixture) ---
+echo "Processing issue: ${{ github.event.issue.title }}"
+
+------------------------------------------------------------------------
+[A0] control / benign title
+  title    : 'Login button broken'
+  rendered : 'echo "Processing issue: Login button broken"'
+  exit     : 0   (stderr: <empty>)
+  stdout   : 'Processing issue: Login button broken\n'
+  verdict  : not executed -- expected
+  detail   : title printed literally, no file created
+
+------------------------------------------------------------------------
+[A1] README payload -> $(echo injected > proof.txt)
+  title    : '$(echo injected > proof.txt)'
+  rendered : 'echo "Processing issue: $(echo injected > proof.txt)"'
+  exit     : 0   (stderr: <empty>)
+  stdout   : 'Processing issue: \n'
+  artifact : proof.txt = 'injected\n'
+  verdict  : EXECUTED -- expected
+  detail   : proof.txt created with content 'injected'; the title itself vanished from the log line
+
+------------------------------------------------------------------------
+[A2] observable payload -> $(date -u +%FT%TZ)
+  title    : '$(date -u +%FT%TZ)'
+  rendered : 'echo "Processing issue: $(date -u +%FT%TZ)"'
+  exit     : 0   (stderr: <empty>)
+  stdout   : 'Processing issue: 2026-10-21T03:18:58Z\n'
+  verdict  : EXECUTED -- expected
+  detail   : command output substituted into the log line
+
+------------------------------------------------------------------------
+[A3] line-break injection (unquoted variant)
+  title    : 'harmless\ndate -u +%FT%TZ'
+  rendered : 'echo Processing issue: harmless\ndate -u +%FT%TZ'
+  exit     : 0   (stderr: <empty>)
+  stdout   : 'Processing issue: harmless\n2026-10-21T03:18:58Z\n'
+  verdict  : EXECUTED -- expected
+  detail   : the second line ran as its own command
+
+------------------------------------------------------------------------
+[A4] safe counterpart -> env + "$TITLE" (bot.yml pattern)
+  title    : '$(date -u +%FT%TZ)'
+  rendered : 'echo "Processing issue: $TITLE"'
+  exit     : 0   (stderr: <empty>)
+  stdout   : 'Processing issue: $(date -u +%FT%TZ)\n'
+  verdict  : not executed -- expected
+  detail   : payload printed literally, never executed
+
+========================================================================
+summary
+========================================================================
+case executed   matches model  label
+A0   no         yes            control / benign title
+A1   yes        yes            README payload -> $(echo injected > proof.txt)
+A2   yes        yes            observable payload -> $(date -u +%FT%TZ)
+A3   yes        yes            line-break injection (unquoted variant)
+A4   no         yes            safe counterpart -> env + "$TITLE" (bot.yml pattern)
+
+notes for the report
+------------------------------------------------------------------------
+* A1: the canonical README payload leaves NO visible trace in the log
+  itself -- the line just reads 'Processing issue: '. The only
+  evidence is the artefact on the (ephemeral) runner. Use A1 as the
+  reproduction recipe, but capture A2-style output for the write-up.
+* A2: execution happens because the expression is expanded into the
+  script text BEFORE bash parses it. The fixture already wraps the
+  line in double quotes, and that does not help -- quoting is applied
+  after expansion, not before.
+* A3: in an unquoted context a newline in the title starts a new
+  command even without $(). This is why 'just remove $()' is not a
+  fix either.
+* A4: the actual fix is to stop the value being script at all -- pass
+  it through env and reference "$TITLE" (bot.yml does exactly this).
+* Scope: this job declares `permissions: contents: read` and holds no
+  secrets, so the impact is runner-local code execution, not
+  credential theft. Do not overstate it in the report.
+* Still required for the report: one real `issues: opened` run on your
+  own base repo, to evidence the platform side of the chain.
+
+all cases behaved as modelled

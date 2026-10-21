@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="940" viewBox="0 0 1400 940">
+<defs>
+<marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 z" fill="#667085"/></marker>
+<style>text{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;fill:#101828}.mono{font-family:'SF Mono','Menlo','Consolas','DejaVu Sans Mono',monospace;font-size:12px}.h1{font-size:25px;font-weight:700}.sub{font-size:13px;fill:#667085}.col{font-size:12px;font-weight:700;letter-spacing:.09em}.bt{font-size:14px;font-weight:700}.tag{font-size:10px;font-weight:700;letter-spacing:.08em;fill:#667085}.dim{font-size:11.5px;fill:#667085}.note{font-size:12px;fill:#344054}</style>
+</defs>
+<rect width="1400" height="940" fill="#ffffff"/>
+<text class="h1" x="50" y="52">Task A — where an issue title becomes a command</text>
+<text class="sub" x="50" y="78">run 39539793836 · issue #2 · lab-a-script-injection.yml · ubuntu-latest · permissions: contents: read</text>
+<text class="col" x="50" y="124" fill="#b42318">AS CONFIGURED — VULNERABLE PATH</text>
+<text class="col" x="730" y="124" fill="#067647">FIXED — ENV INDIRECTION (bot.yml)</text>
+<rect x="50" y="140" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="68" y="166">1 · Issue title</text>
+<text class="tag" x="652" y="166" text-anchor="end" fill="#667085">OUR INPUT</text>
+<text class="mono" x="68" y="190">$(date -u +%FT%TZ)</text>
+<text class="dim" x="68" y="208">any account that can open an issue</text>
+<line x1="360.0" y1="240" x2="360.0" y2="269" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="50" y="276" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="68" y="302">2 · Workflow</text>
+<text class="tag" x="652" y="302" text-anchor="end" fill="#b42318">OUR CONFIG</text>
+<text class="mono" x="68" y="326">run: echo &quot;Processing issue: ${{ github.event.issue.title }}&quot;</text>
+<text class="dim" x="68" y="344">the untrusted value becomes script text</text>
+<line x1="360.0" y1="376" x2="360.0" y2="405" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="50" y="412" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="68" y="438">3 · Expression expansion</text>
+<text class="tag" x="652" y="438" text-anchor="end" fill="#667085">PLATFORM</text>
+<text class="mono" x="68" y="462">echo &quot;Processing issue: $(date -u +%FT%TZ)&quot;</text>
+<text class="dim" x="68" y="480">substituted into the script before the shell runs</text>
+<line x1="360.0" y1="512" x2="360.0" y2="541" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="50" y="548" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="68" y="574">4 · bash -e executes</text>
+<text class="tag" x="652" y="574" text-anchor="end" fill="#667085">PLATFORM</text>
+<text class="mono" x="68" y="598">Processing issue: 2026-10-21T03:39:45Z</text>
+<text class="dim" x="68" y="616">← the timestamp is date&#x27;s output, not the title</text>
+<line x1="360.0" y1="648" x2="360.0" y2="677" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="50" y="684" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="68" y="710">5 · Effect</text>
+<text class="tag" x="652" y="710" text-anchor="end" fill="#b42318">IMPACT</text>
+<text class="note" x="68" y="734">runner-local command execution</text>
+<text class="dim" x="68" y="752">bounded: no secrets · read-only token · ephemeral</text>
+<rect x="730" y="140" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="748" y="166">1 · Issue title</text>
+<text class="tag" x="1332" y="166" text-anchor="end" fill="#667085">OUR INPUT</text>
+<text class="mono" x="748" y="190">$(date -u +%FT%TZ)</text>
+<text class="dim" x="748" y="208">the same untrusted text, unchanged</text>
+<line x1="1040.0" y1="240" x2="1040.0" y2="269" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="730" y="276" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="748" y="302">2 · Workflow</text>
+<text class="tag" x="1332" y="302" text-anchor="end" fill="#067647">OUR CONFIG</text>
+<text class="mono" x="748" y="322">env:</text>
+<text class="mono" x="748" y="340">  TITLE: ${{ github.event.issue.title }}</text>
+<text class="mono" x="748" y="358">run: printf &#x27;Processing issue: %s\n&#x27; &quot;$TITLE&quot;</text>
+<line x1="1040.0" y1="376" x2="1040.0" y2="405" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="730" y="412" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="748" y="438">3 · Expression expansion</text>
+<text class="tag" x="1332" y="438" text-anchor="end" fill="#667085">PLATFORM</text>
+<text class="mono" x="748" y="462">printf &#x27;Processing issue: %s\n&#x27; &quot;$TITLE&quot;</text>
+<text class="dim" x="748" y="480">only the variable name reaches the script</text>
+<line x1="1040.0" y1="512" x2="1040.0" y2="541" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="730" y="548" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="748" y="574">4 · bash -e executes</text>
+<text class="tag" x="1332" y="574" text-anchor="end" fill="#667085">PLATFORM</text>
+<text class="mono" x="748" y="598">Processing issue: $(date -u +%FT%TZ)</text>
+<text class="dim" x="748" y="616">← literal text; bash never re-parses a variable&#x27;s value</text>
+<line x1="1040.0" y1="648" x2="1040.0" y2="677" stroke="#98a2b3" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="730" y="684" width="620" height="100" rx="9" fill="#fcfcfd" stroke="#d0d5dd" stroke-width="1.2"/>
+<text class="bt" x="748" y="710">5 · Effect</text>
+<text class="tag" x="1332" y="710" text-anchor="end" fill="#067647">NO IMPACT</text>
+<text class="note" x="748" y="734">printed as data, never executed</text>
+<text class="dim" x="748" y="752">the value never becomes script</text>
+<line x1="700" y1="132" x2="700" y2="792" stroke="#eaecf0" stroke-width="1.4" stroke-dasharray="4 6"/>
+<rect x="50" y="812" width="1300" height="86" rx="9" fill="#f9fafb" stroke="#eaecf0"/>
+<text class="bt" x="70" y="842" fill="#b42318">Not Applicable (our configuration)</text>
+<text class="note" x="70" y="866">The platform performed the documented expansion exactly as promised — nothing was bypassed. This is the boundary case:</text>
+<text class="note" x="70" y="884">“we wrote it wrong” ends here; “the platform broke its promise” is what B, C and D must show.</text>
+<text class="dim" x="1330" y="842" text-anchor="end">Both lanes received identical input.</text>
+<text class="dim" x="1330" y="866" text-anchor="end">The only difference is the sink.</text>
+<text class="dim" x="1330" y="884" text-anchor="end">Evidence: platform-evidence-a.md</text>
+</svg>

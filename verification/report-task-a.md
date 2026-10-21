@@ -57,6 +57,11 @@ requires `@bot` in the body, and it passes user text through `env:` rather than
 into the script. Same input, different handling, no execution — the safe
 counterpart reacting to the same stimulus.
 
+![Figure 1 — the same issue title through the vulnerable and fixed paths](fig-task-a-chain.png)
+
+*Figure 1 — Both lanes start from identical input. The left lane ends in command
+execution; the right lane ends in data.*
+
 ## How verified
 
 Two sources, kept deliberately separate:

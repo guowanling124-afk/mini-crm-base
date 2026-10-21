@@ -117,4 +117,3 @@ Keep only the minimal workflow snippet + trigger + the relevant log line. A
 negative result ("configured per X, platform behaved per its promise") is still
 a complete, gradeable finding.
 
-## INFO5995 defensive workflow validation.
